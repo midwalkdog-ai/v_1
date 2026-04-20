@@ -22,7 +22,25 @@ function initDB() {
       password TEXT NOT NULL,
       name TEXT NOT NULL,
       role TEXT DEFAULT 'admin',
+      stripe_customer_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      stripe_subscription_id TEXT UNIQUE,
+      stripe_customer_id TEXT,
+      plan_name TEXT NOT NULL,
+      price_id TEXT,
+      status TEXT DEFAULT 'trialing',
+      current_period_start DATETIME,
+      current_period_end DATETIME,
+      trial_ends_at DATETIME,
+      cancel_at_period_end INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS clients (

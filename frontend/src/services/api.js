@@ -55,4 +55,25 @@ export const analyticsAPI = {
   resolveAlert: (id) => api.patch(`/analytics/alerts/${id}/resolve`),
 };
 
+// Billing / Stripe
+export const billingAPI = {
+  // Get available plans
+  plans: () => api.get('/billing/plans'),
+
+  // Get current subscription status
+  status: () => api.get('/billing/status'),
+
+  // Create Stripe Checkout session → returns { url } to redirect user
+  checkout: (plan) => api.post('/billing/checkout', { plan }),
+
+  // Create Stripe Customer Portal session → returns { url } to manage billing
+  portal: () => api.post('/billing/portal'),
+
+  // Cancel subscription at period end
+  cancel: () => api.post('/billing/cancel'),
+
+  // Resume a pending cancellation
+  resume: () => api.post('/billing/resume'),
+};
+
 export default api;

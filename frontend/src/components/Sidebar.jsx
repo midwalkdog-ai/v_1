@@ -14,6 +14,9 @@ const NAV = [
   { to: '/analytics', label: 'Analytics', icon: (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 14l4-4 3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
   )},
+  { to: '/billing', label: 'Billing', icon: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="5" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M2 8h14" stroke="currentColor" strokeWidth="1.5"/><path d="M6 12h2M10 12h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+  )},
 ];
 
 export default function Sidebar({ open, onClose }) {
