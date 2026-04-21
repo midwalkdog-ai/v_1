@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { clientsAPI } from '../services/api';
+import { clientsAPI, exportAPI } from '../services/api';
+import UpgradePrompt from '../components/UpgradePrompt';
 
 const INDUSTRIES = ['SaaS', 'Healthcare', 'Logistics', 'Media', 'Design', 'Analytics', 'Finance', 'E-commerce', 'Other'];
 const STATUSES = ['all', 'active', 'at-risk', 'churned'];
@@ -35,6 +36,7 @@ export default function Clients() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [upgradePrompt, setUpgradePrompt] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -56,8 +58,14 @@ export default function Clients() {
       if (editing) await clientsAPI.update(editing.id, form);
       else await clientsAPI.create(form);
       setShowModal(false); load();
-    } catch (err) { alert(err.response?.data?.error || 'Error saving'); }
-    finally { setSaving(false); }
+    } catch (err) {
+      if (err.response?.data?.upgrade_required) {
+        setShowModal(false);
+        setUpgradePrompt(err.response.data);
+      } else {
+        alert(err.response?.data?.error || 'Error saving');
+      }
+    } finally { setSaving(false); }
   };
 
   const remove = async (id) => {
@@ -73,12 +81,20 @@ export default function Clients() {
           <h1 className="font-display text-2xl font-bold text-white">Clients</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">{clients.length} clients tracked</p>
         </div>
-        <button onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-black transition-all"
-          style={{ background: 'linear-gradient(135deg, #00E5A0, #00C988)' }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-          Add Client
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportAPI.download(exportAPI.clientsCSV())}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border border-[#1E2130] text-[#6B7280] hover:text-white hover:border-[#2A3045] transition-all">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v7M4 6l3 3 3-3M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Export CSV
+          </button>
+          <button onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-black transition-all"
+            style={{ background: 'linear-gradient(135deg, #00E5A0, #00C988)' }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            Add Client
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -223,6 +239,9 @@ export default function Clients() {
           </div>
         </div>
       )}
+
+      {/* Upgrade prompt — fires when plan limit is hit */}
+      <UpgradePrompt data={upgradePrompt} onClose={() => setUpgradePrompt(null)} />
 
       {/* Delete confirm */}
       {deleteId && (

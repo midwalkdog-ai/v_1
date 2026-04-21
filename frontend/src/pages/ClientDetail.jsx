@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { clientsAPI, projectsAPI } from '../services/api';
+import { clientsAPI, projectsAPI, checkinsAPI } from '../services/api';
 
 const STATUS_STYLE = {
   active:    'bg-[#00E5A012] text-[#00E5A0] border-[#00E5A020]',
@@ -53,14 +53,21 @@ export default function ClientDetail() {
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [tab, setTab] = useState('overview');
+  const [checkins, setCheckins] = useState([]);
+  const [checkinForm, setCheckinForm] = useState({ title: '', description: '', mood: 'neutral' });
+  const [checkinSaving, setCheckinSaving] = useState(false);
 
   const load = async () => {
     try {
-      const res = await clientsAPI.get(id);
-      setClient(res.data);
-      setHealthScore(res.data.health_score);
-      setStatus(res.data.status);
-      setNotes(res.data.notes || '');
+      const [clientRes, checkinsRes] = await Promise.all([
+        clientsAPI.get(id),
+        checkinsAPI.list({ client_id: id }),
+      ]);
+      setClient(clientRes.data);
+      setHealthScore(clientRes.data.health_score);
+      setStatus(clientRes.data.status);
+      setNotes(clientRes.data.notes || '');
+      setCheckins(checkinsRes.data);
     } catch { navigate('/clients'); }
     finally { setLoading(false); }
   };
@@ -141,10 +148,10 @@ export default function ClientDetail() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-[#111318] border border-[#1E2130] rounded-xl p-1 w-fit">
-        {['overview', 'projects', 'notes'].map(t => (
+        {['overview', 'projects', 'checkins', 'notes'].map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${tab === t ? 'bg-[#00E5A012] text-[#00E5A0] border border-[#00E5A020]' : 'text-[#6B7280] hover:text-white'}`}>
-            {t}
+            {t}{t === 'checkins' && checkins.length > 0 ? ` (${checkins.length})` : ''}
           </button>
         ))}
       </div>
@@ -225,6 +232,106 @@ export default function ClientDetail() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Tab: Check-ins */}
+      {tab === 'checkins' && (
+        <div className="space-y-4">
+          {/* Log new check-in */}
+          <div className="bg-[#111318] border border-[#1E2130] rounded-2xl p-5 space-y-4">
+            <div className="font-medium text-white text-sm">Log Check-in</div>
+            <div>
+              <label className="block text-xs font-medium text-[#6B7280] mb-1.5 uppercase tracking-wider">Title</label>
+              <input type="text" placeholder="Weekly call, QBR, project review..."
+                value={checkinForm.title}
+                onChange={e => setCheckinForm(f => ({ ...f, title: e.target.value }))}
+                className="w-full bg-[#0A0B0F] border border-[#1E2130] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#374151] focus:outline-none focus:border-[#00E5A040]" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#6B7280] mb-1.5 uppercase tracking-wider">Notes</label>
+              <textarea rows={3} placeholder="What was discussed? Any action items?"
+                value={checkinForm.description}
+                onChange={e => setCheckinForm(f => ({ ...f, description: e.target.value }))}
+                className="w-full bg-[#0A0B0F] border border-[#1E2130] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#374151] focus:outline-none focus:border-[#00E5A040] resize-none" />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#6B7280] uppercase tracking-wider mr-1">Sentiment</span>
+                {[
+                  { value: 'positive', label: '😊 Positive', color: '#00E5A0' },
+                  { value: 'neutral',  label: '😐 Neutral',  color: '#4A9EFF' },
+                  { value: 'negative', label: '😟 Negative', color: '#FF2D55' },
+                ].map(m => (
+                  <button key={m.value} onClick={() => setCheckinForm(f => ({ ...f, mood: m.value }))}
+                    className={`px-3 py-1.5 rounded-lg text-xs transition-all border ${checkinForm.mood === m.value ? 'text-white' : 'text-[#6B7280] border-[#1E2130] hover:text-white'}`}
+                    style={checkinForm.mood === m.value ? { color: m.color, background: `${m.color}15`, borderColor: `${m.color}30` } : {}}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                disabled={!checkinForm.title.trim() || checkinSaving}
+                onClick={async () => {
+                  if (!checkinForm.title.trim()) return;
+                  setCheckinSaving(true);
+                  try {
+                    await checkinsAPI.create({ client_id: id, ...checkinForm });
+                    setCheckinForm({ title: '', description: '', mood: 'neutral' });
+                    const res = await checkinsAPI.list({ client_id: id });
+                    setCheckins(res.data);
+                    // Refresh health score display
+                    const clientRes = await clientsAPI.get(id);
+                    setHealthScore(clientRes.data.health_score);
+                  } catch (e) { console.error(e); }
+                  finally { setCheckinSaving(false); }
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-black disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: 'linear-gradient(135deg, #00E5A0, #00C988)' }}>
+                {checkinSaving ? 'Saving...' : 'Log Check-in'}
+              </button>
+            </div>
+          </div>
+
+          {/* Check-in history */}
+          {checkins.length === 0 ? (
+            <div className="bg-[#111318] border border-[#1E2130] rounded-2xl py-12 text-center">
+              <div className="text-3xl mb-3">📋</div>
+              <div className="text-sm text-[#6B7280]">No check-ins logged yet</div>
+              <div className="text-xs text-[#374151] mt-1">Log your first check-in above</div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {checkins.map(c => {
+                const moodColor = c.description?.includes('positive') ? '#00E5A0' : c.description?.includes('negative') ? '#FF2D55' : '#4A9EFF';
+                return (
+                  <div key={c.id} className="bg-[#111318] border border-[#1E2130] rounded-2xl p-5 group">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white text-sm">{c.title}</div>
+                        {c.description && (
+                          <div className="text-sm text-[#9CA3AF] mt-1.5 leading-relaxed">{c.description}</div>
+                        )}
+                        <div className="text-xs text-[#374151] mt-2 font-mono">
+                          {new Date(c.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                          {' · '}
+                          {new Date(c.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          await checkinsAPI.delete(c.id);
+                          setCheckins(prev => prev.filter(x => x.id !== c.id));
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#FF2D5510] text-[#6B7280] hover:text-[#FF2D55] flex-shrink-0">
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3h9M5 3V2h3v1M3 3l.4 6.5h5.2L9 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

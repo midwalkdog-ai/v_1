@@ -46,6 +46,8 @@ app.use('/api/clients', require('./routes/clients'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/billing', require('./routes/billing'));
+app.use('/api/export', require('./routes/export'));
+app.use('/api/checkins', require('./routes/checkins'));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => res.json({ status: 'ok', version: '1.0.0', service: 'PulseBoard API' }));

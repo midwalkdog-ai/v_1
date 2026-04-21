@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { projectsAPI, clientsAPI } from '../services/api';
+import { projectsAPI, clientsAPI, exportAPI } from '../services/api';
+import UpgradePrompt from '../components/UpgradePrompt';
 
 const STATUS_CONFIG = {
   active:    { label: 'Active',    color: '#4A9EFF', bg: '#4A9EFF15', border: '#4A9EFF25' },
@@ -98,6 +99,7 @@ export default function Projects() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [upgradePrompt, setUpgradePrompt] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -123,8 +125,14 @@ export default function Projects() {
       if (editing) await projectsAPI.update(editing.id, form);
       else await projectsAPI.create(form);
       setShowModal(false); load();
-    } catch (err) { alert(err.response?.data?.error || 'Error saving'); }
-    finally { setSaving(false); }
+    } catch (err) {
+      if (err.response?.data?.upgrade_required) {
+        setShowModal(false);
+        setUpgradePrompt(err.response.data);
+      } else {
+        alert(err.response?.data?.error || 'Error saving');
+      }
+    } finally { setSaving(false); }
   };
 
   const remove = async (id) => {
@@ -148,12 +156,20 @@ export default function Projects() {
           <h1 className="font-display text-2xl font-bold text-white">Projects</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">{projects.length} total · ${totalSpent.toLocaleString()} spent of ${totalBudget.toLocaleString()}</p>
         </div>
-        <button onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-black transition-all"
-          style={{ background: 'linear-gradient(135deg, #00E5A0, #00C988)' }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-          New Project
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportAPI.download(exportAPI.projectsCSV())}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border border-[#1E2130] text-[#6B7280] hover:text-white hover:border-[#2A3045] transition-all">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v7M4 6l3 3 3-3M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Export CSV
+          </button>
+          <button onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-black transition-all"
+            style={{ background: 'linear-gradient(135deg, #00E5A0, #00C988)' }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            New Project
+          </button>
+        </div>
       </div>
 
       {/* Status filter */}
@@ -280,6 +296,9 @@ export default function Projects() {
           </div>
         </div>
       )}
+
+      {/* Upgrade prompt */}
+      <UpgradePrompt data={upgradePrompt} onClose={() => setUpgradePrompt(null)} />
 
       {/* Delete confirm */}
       {deleteId && (

@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { db } = require('../db/database');
 const auth = require('../middleware/auth');
+const { enforceClientLimit } = require('../middleware/subscription');
 
 const router = express.Router();
 router.use(auth);
@@ -31,7 +32,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/clients
-router.post('/', (req, res) => {
+router.post('/', enforceClientLimit, (req, res) => {
   const { name, company, email, phone, mrr, contract_value, industry, renewal_date, start_date, notes } = req.body;
   if (!name) return res.status(400).json({ error: 'Client name required' });
 

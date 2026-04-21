@@ -2,6 +2,13 @@ const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { db } = require('../db/database');
 const auth = require('../middleware/auth');
+const {
+  sendWelcomeEmail,
+  sendTrialEndingEmail,
+  sendPaymentFailedEmail,
+  sendCancellationEmail,
+  sendPaymentSucceededEmail,
+} = require('../services/email');
 
 const router = express.Router();
 
@@ -331,7 +338,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             WHERE stripe_subscription_id = ?
           `).run(invoice.subscription);
 
-          // Log payment in activities
           const sub = db.prepare('SELECT user_id FROM subscriptions WHERE stripe_subscription_id = ?').get(invoice.subscription);
           if (sub) {
             db.prepare(`
@@ -342,6 +348,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
               'payment_succeeded',
               `Payment received: $${(invoice.amount_paid / 100).toFixed(2)}`
             );
+            // Send receipt email
+            const user = db.prepare('SELECT email, name FROM users WHERE id = ?').get(sub.user_id);
+            const subRow = db.prepare('SELECT current_period_end FROM subscriptions WHERE stripe_subscription_id = ?').get(invoice.subscription);
+            if (user) sendPaymentSucceededEmail({
+              to: user.email, name: user.name,
+              amount: invoice.amount_paid,
+              nextBillingDate: subRow?.current_period_end,
+            });
           }
         }
         break;
@@ -356,7 +370,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             WHERE stripe_subscription_id = ?
           `).run(invoice.subscription);
 
-          // Create alert for user
           const sub = db.prepare('SELECT user_id FROM subscriptions WHERE stripe_subscription_id = ?').get(invoice.subscription);
           if (sub) {
             db.prepare(`
@@ -367,6 +380,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
               'critical',
               `Payment failed for your PulseBoard subscription. Please update your payment method.`
             );
+            // Send failure email
+            const user = db.prepare('SELECT email, name FROM users WHERE id = ?').get(sub.user_id);
+            if (user) sendPaymentFailedEmail({ to: user.email, name: user.name, amount: invoice.amount_due });
           }
         }
         break;
@@ -385,6 +401,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             'warning',
             `Your free trial ends in 3 days. Add a payment method to keep access.`
           );
+          // Send trial ending email
+          const user = db.prepare('SELECT email, name FROM users WHERE id = ?').get(sub.user_id);
+          const subRow = db.prepare('SELECT trial_ends_at, plan_name FROM subscriptions WHERE stripe_subscription_id = ?').get(subscription.id);
+          if (user) sendTrialEndingEmail({
+            to: user.email, name: user.name,
+            trialEndDate: subRow?.trial_ends_at,
+            plan: subRow?.plan_name,
+          });
         }
         break;
       }

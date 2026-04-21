@@ -9,6 +9,7 @@ import ClientDetail from './pages/ClientDetail';
 import Projects from './pages/Projects';
 import Analytics from './pages/Analytics';
 import Billing from './pages/Billing';
+import Settings from './pages/Settings';
 
 function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
           <Route path="/billing/success" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

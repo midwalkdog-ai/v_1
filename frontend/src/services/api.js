@@ -57,23 +57,33 @@ export const analyticsAPI = {
 
 // Billing / Stripe
 export const billingAPI = {
-  // Get available plans
   plans: () => api.get('/billing/plans'),
-
-  // Get current subscription status
   status: () => api.get('/billing/status'),
-
-  // Create Stripe Checkout session → returns { url } to redirect user
   checkout: (plan) => api.post('/billing/checkout', { plan }),
-
-  // Create Stripe Customer Portal session → returns { url } to manage billing
   portal: () => api.post('/billing/portal'),
-
-  // Cancel subscription at period end
   cancel: () => api.post('/billing/cancel'),
-
-  // Resume a pending cancellation
   resume: () => api.post('/billing/resume'),
+};
+
+// CSV Export (returns a download URL — open directly in browser)
+export const exportAPI = {
+  clientsCSV: () => `/api/export/clients.csv`,
+  projectsCSV: () => `/api/export/projects.csv`,
+  activitiesCSV: () => `/api/export/activities.csv`,
+  // Download helper — opens URL with auth token as query param
+  download: (path) => {
+    const token = localStorage.getItem('pb_token');
+    const url = `${path}?token=${token}`;
+    const a = document.createElement('a');
+    a.href = url; a.download = ''; a.click();
+  },
+};
+
+// Check-ins
+export const checkinsAPI = {
+  list: (params) => api.get('/checkins', { params }),
+  create: (data) => api.post('/checkins', data),
+  delete: (id) => api.delete(`/checkins/${id}`),
 };
 
 export default api;

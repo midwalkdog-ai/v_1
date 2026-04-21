@@ -17,6 +17,9 @@ const NAV = [
   { to: '/billing', label: 'Billing', icon: (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="5" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M2 8h14" stroke="currentColor" strokeWidth="1.5"/><path d="M6 12h2M10 12h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
   )},
+  { to: '/settings', label: 'Settings', icon: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="M9 2v1.5M9 14.5V16M2 9h1.5M14.5 9H16M4.1 4.1l1.06 1.06M12.84 12.84l1.06 1.06M4.1 13.9l1.06-1.06M12.84 5.16l1.06-1.06" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+  )},
 ];
 
 export default function Sidebar({ open, onClose }) {

@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { db } = require('../db/database');
 const auth = require('../middleware/auth');
+const { enforceProjectLimit } = require('../middleware/subscription');
 
 const router = express.Router();
 router.use(auth);
@@ -18,7 +19,7 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/projects
-router.post('/', (req, res) => {
+router.post('/', enforceProjectLimit, (req, res) => {
   const { client_id, name, status, due_date, budget } = req.body;
   if (!client_id || !name) return res.status(400).json({ error: 'client_id and name required' });
 
